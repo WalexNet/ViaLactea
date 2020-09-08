@@ -1,0 +1,7 @@
+{
+    "board": "arduino:avr:diecimila",
+    "configuration": "cpu=atmega328",
+    "sketch": "vialactea00.ino",
+    "port": "/dev/ttyUSB0",
+    "programmer": "AVRISP mkII"
+}

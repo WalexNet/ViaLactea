@@ -1,0 +1,22 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "/snap/arduino/41/tools/**",
+                "/snap/arduino/41/hardware/arduino/avr/**",
+                "/snap/arduino/41/hardware/tools/**",
+                "/snap/arduino/41/hardware/arduino/avr/cores/arduino/**",
+                "/home/walex/Programacion/arduino/libraries/**"
+            ],
+            "forcedInclude": [
+                "/snap/arduino/41/hardware/arduino/avr/cores/arduino/Arduino.h"
+            ],
+            "intelliSenseMode": "gcc-x64",
+            "compilerPath": "/usr/bin/clang",
+            "cStandard": "c11",
+            "cppStandard": "c++14"
+        }
+    ],
+    "version": 4
+}
