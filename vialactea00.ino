@@ -97,8 +97,8 @@ LiquidCrystal_I2C lcd(0x27, 16, 2); // Inicia el LCD en la dirección 0x27, con 
 RTC_DS3231 rtc;                     // Creamos reloj
 
 // Configuramos reles prueba **************************************************************
-//InterPin electroValvulas34(K3, K4, tpes, tpes);
-InterPin electroValvulas34(6, 7, tpes, tpes);
+InterPin electroValvulas34(K3, K4, tpes, tpes);
+//InterPin electroValvulas34(6, 7, tpes, tpes);
 
 
 void setup() { 
@@ -151,7 +151,6 @@ void loop() {
         break; // Fin estado MANUAL
       }
       if (presionaBoton(BTN_EXIT)) { // Transición BTN_EXIT "B1" de AUTOMATICO a MENU
-        // Pasamos a estado MENU
         tMenu();
         break; // Fin estado MENU
       }
@@ -511,8 +510,12 @@ void tAutomatico(){
 
 void tOff(){
   // Pasamos a estado OFF
+  estado = S_OFF;
+  manual      = false;
+  automatico  = false;
   digitalWrite(LED_OFF, HIGH);
   digitalWrite(LED_ON,   LOW);
+  electroValvulas34.Off();
   printOff();
 }
 
