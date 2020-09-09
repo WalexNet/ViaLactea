@@ -1,6 +1,29 @@
-/** Librerias externas **/
+/*
+ * Título del boceto
+
+Describe lo que hace en términos sencillos. Consulte los componentes
+unido a los distintos pines.
+
+El circuito:
+* enumere los componentes adjuntos a cada entrada
+* enumere los componentes adjuntos a cada salida
+
+Día de creación mes año
+Por el nombre del autor
+Año modificado día mes
+Por el nombre del autor
+
+http: //url/of/online/tutorial.cc
+ * 
+ */
+
+/***** Librerias externas *****/
 #include <LiquidCrystal_I2C.h>
 #include <RTClib.h>
+/***** Librerias  Propias *****/
+#include <InterPin.h>
+
+/*** Archivos  del Proyecto ***/
 
 /************************** Constantes y Globales *****************************/
 
@@ -55,7 +78,10 @@ boolean  manual           = false;  // Variable global del estado de manual
 uint8_t  button_estate[4];          // Este arreglo contiene el último estado conocido de cada línea
 unsigned long tempo       = 0;      // Tiempo del ordeñe
 String   tiempo;
-int      aaaa             = 2020;      // Variable Año
+int      aaaa             = 2020;   
+
+
+// Variable Año
 int      mm               = 1;      // Variable Mes        
 int      dd               = 1;      // Variable Día
 int      hh               = 0;      // Variable Horas
@@ -70,27 +96,31 @@ DateTime ahora;                     // Variable Dia y tiempo actual
 LiquidCrystal_I2C lcd(0x27, 16, 2); // Inicia el LCD en la dirección 0x27, con 16 caracteres y 2 líneas
 RTC_DS3231 rtc;                     // Creamos reloj
 
+// Configuramos reles prueba **************************************************************
+//InterPin electroValvulas34(K3, K4, tpes, tpes);
+InterPin electroValvulas34(6, 7, tpes, tpes);
 
-void setup() {  
+
+void setup() { 
   Serial.begin(9600);             // Inicializamos el puerto serie
   setup_inicio();
   startReloj();
-  printOff();
+  tOff();
 } // Fin setup
 
 
 /* Máquina de estados - Automata */
 void loop() {
+  if (manual || automatico) electroValvulas34.Update();
+  else electroValvulas34.Off();
+  
   switch (estado) {
     case S_OFF:        /*** INICIO ESTADO S_OFF ***/
       Serial.print("Estado S_OFF: ");
       Serial.println(S_OFF);
       if (presionaBoton(BTN_MENU)) { // Transición BTN_MENU "B2" de OFF a MENU
         // Pasamos al estado menu
-        estado = S_MENU;
-        digitalWrite(LED_OFF, LOW);
-        digitalWrite(LED_ON, HIGH);        
-        printMenu();
+        tMenu();
         break; // Fin estado Menu
       }
       break;      // *** FIN ESTADO S_OFF ****
@@ -101,16 +131,12 @@ void loop() {
       Serial.println(S_MENU);
       if (presionaBoton(BTN_MENU)) { // Transición BTN_MENU "B2" de MENU a AUTOMATICO
         // Pasamos al estado AUTOMATICO
-        estado = S_AUTO;
-        printAutomatico(automatico);
+        tAutomatico();
         break; // Fin estado automatico
       }
       if (presionaBoton(BTN_EXIT)) { // Transición BTN_EXIT "B1" de MENU a OFF
         // Pasamos a Estado OFF
-        estado = S_OFF;
-        digitalWrite(LED_OFF, HIGH);
-        digitalWrite(LED_ON,   LOW);
-        printOff();
+        tOff();
         break; // Fin estado OFF
       }
       break;      // *** FIN ESTADO S_MENU ****
@@ -121,21 +147,17 @@ void loop() {
       Serial.println(S_AUTO);
       if (presionaBoton(BTN_MENU)) { // Transición BTN_MENU "B2" de AUTOMATICO a MANUAL
         // Pasamos al estado MANUAL
-        estado = S_MANUAL;
-        printManual(manual);
+        tManual();
         break; // Fin estado MANUAL
       }
       if (presionaBoton(BTN_EXIT)) { // Transición BTN_EXIT "B1" de AUTOMATICO a MENU
         // Pasamos a estado MENU
-        estado = S_MENU;
-        printMenu();
+        tMenu();
         break; // Fin estado MENU
       }
       if (presionaBoton(BTN_SEL))  { // Transición BTN_SEL  "B3" de AUTOMATICO a SEL
         // Seguimos en AUTOMATICO solo seleccionamos la accion
-        estado = S_AUTO;
-        if (!manual) printAutomatico(!automatico); // Si esta manual no podemos poner automatico
-        else printError("Modo Manu ACTIVO");
+        tSetAutomatico();
         break; // Fin Accion
       }
       break;      // *** FIN ESTADO S_AUTO ****
@@ -145,22 +167,16 @@ void loop() {
       Serial.print("Estado S_MANUAL: ");
       Serial.println(S_MANUAL);
       if (presionaBoton(BTN_MENU)) { // Transición BTN_MENU "B2" de MANUAL a INFO
-        // Pasamos a estado INFO
-        estado = S_INFO;
-        printInfo("T: 00:00", "   00.0L");
+        tInfo();
         break; // Fin estado INFO
       }
       if (presionaBoton(BTN_EXIT)) { // Transición BTN_EXIT "B1" de MANUAL a MENU
-        // Pasamos a estado MENU
-        estado = S_MENU;
-        printMenu();
+        tMenu();
         break; // Fin menu
       }
       if (presionaBoton(BTN_SEL))  { // Transición BTN_SEL  "B3" de MANUAL a SEL
         // Estado MANUAL Seleccionamos
-        estado = S_MANUAL;
-        if (!automatico) printManual(!manual);     // Si esta automatico no podemos poner manual
-        else printError("Modo auto ACTIVO");
+        tSetManual();
         break; // Fin Seleccion
       }
       break;      // *** FIN ESTADO S_MANUAL ***
@@ -170,13 +186,11 @@ void loop() {
       Serial.print("Estado S_INFO: ");
       Serial.println(S_INFO);
       if (presionaBoton(BTN_MENU)) { // Transición BTN_MENU "B2" de INFO a CONFIG
-        estado = S_CONFIG;
-        printConfig();
+        tConfig();
         break;
       }
       if (presionaBoton(BTN_EXIT)) { // Transición BTN_EXIT "B1" de INFO a MENU
-        estado = S_MENU;
-        printMenu();
+        tMenu();
         break;
       }
       break;      // *** FIN ESTADO S_INFO ****
@@ -186,52 +200,37 @@ void loop() {
       Serial.print("Estado S_CONFIG: ");
       Serial.println(S_CONFIG);
       if (presionaBoton(BTN_MENU)) { // Transición BTN_MENU "B2" de CONFIG a AUTO
-        estado = S_AUTO;
-        printAutomatico(automatico);
+        tAutomatico();
         break;
       }
       if (presionaBoton(BTN_EXIT)) { // Transición BTN_EXIT "B1" de CONFIG a MENU
-        estado = S_MENU;
-        printMenu();
+        tMenu();
         break;
       }
       if (presionaBoton(BTN_SEL))  { // Transición BTN_SEL  "B3" de CONFIG a BOX ******ANO
-        //estado = S_ANO;
-        //printSetFechaHora;
-        estado = S_BOX;
-        printSetBox();
+        tBox();
         break;
       }
       break;      // *** FIN ESTADO S_CONFIG ****
       // ****************************************
-
-      // Añadir las transiciones para los estados S_BOX, S_TPES, S_DT
       
     case S_BOX:     /*** INICIO ESTADO S_BOX ***/  
       Serial.print("Estado S_BOX: "); 
       Serial.println(S_BOX);
       if (presionaBoton(BTN_MENU)) { // Transición BTN_MENU "B2" de BOX a TPES ******ANO
-        estado = S_TPES;
-        printSetTiempoPes();
+        tTpes();
         break;    
       }
       if (presionaBoton(BTN_EXIT)) { // Transición BTN_EXIT "B1" de BOX a CONFIG
-        estado = S_CONFIG;
-        printConfig();
+        tConfig();
         break;
       }
       if (presionaBoton(BTN_SEL))  { // Transición BTN_SEL  "B3" incrementamos BOX
-        box++;
-        printSetBox();
+        tIncBox();
         break;
       }
       if (presionaBoton(BTN_SET))  { // Transición BTN_SET  "B4" decrementamos BOX
-        if (box>0) {
-          box--;
-        } else {
-          box = 0;
-        }
-        printSetBox();
+        tDecBox();
         break;
       }        
       break;      // *** FIN ESTADO S_BOX  ****
@@ -241,27 +240,19 @@ void loop() {
       Serial.print("Estado S_TPES: ");
       Serial.println(S_TPES);
       if (presionaBoton(BTN_MENU)) { // Transición BTN_MENU "B2" de TPES a DT
-        estado = S_DT;
-        printDT();
+        tDt();
         break;    
       }
       if (presionaBoton(BTN_EXIT)) { // Transición BTN_EXIT "B1" de TPES a CONFIG
-        estado = S_CONFIG;
-        printConfig();
+        tConfig();
         break;
       }
       if (presionaBoton(BTN_SEL))  { // Transición BTN_SEL  "B3" incrementamos TPES
-        tpes += 50;
-        printSetTiempoPes();
+        tIncTpes();
         break;
       }
       if (presionaBoton(BTN_SET))  { // Transición BTN_SET  "B4" decrementamos TPES
-        if (tpes>0) {
-          tpes -= 50;
-        } else {
-          tpes = 0;
-        }
-        printSetTiempoPes();
+        tDecTpes();
         break;
       }        
       break;      // *** FIN ESTADO S_TPES ****
@@ -283,23 +274,15 @@ void loop() {
       Serial.println(ahora.minute());
       
       if (presionaBoton(BTN_MENU)) { // Transición BTN_MENU "B2" de DT a BOX
-        estado = S_BOX;
-        printSetBox();
+        tBox();
         break;
       }
       if (presionaBoton(BTN_EXIT)) { // Transición BTN_EXIT "B1" de DT a CONFIG
-        estado = S_CONFIG;
-        printConfig();
+        tConfig();
         break;
       }
       if (presionaBoton(BTN_SEL))  { // Transición BTN_SEL  "B3" de DT a ANO
-        Serial.println("PRESIONAMOS B3 SEL");
-        estado = S_ANO;
-        Serial.print("ESTADO = S_ANO = ");
-        Serial.println(estado);
-   
-        Serial.println(S_ANO);
-        printSetFechaHora();
+        tAno();
         break;
       }
       break;      // *** FIN ESTADO S_DT ****
@@ -309,23 +292,19 @@ void loop() {
       Serial.print("Estado S_ANO: ");
       Serial.println(S_ANO);
       if (presionaBoton(BTN_MENU)) { // Transición BTN_MENU "B2" de ANO a MES
-        estado = S_MES;
-        printSetFechaHora();
+        tMes();
         break;
       }
       if (presionaBoton(BTN_EXIT)) { // Transición BTN_EXIT "B1" de ANO a CHECK
-        estado = S_CHECK;
-        printCheck(confirma);
+        tCheck();
         break;
       }
       if (presionaBoton(BTN_SEL))  { // Transición BTN_SEL  "B3" incrementamos AÑO
-        aaaa++;
-        printSetFechaHora();
+        tIncAno();
         break;
       }
       if (presionaBoton(BTN_SET))  { // Transición BTN_SET  "B4" decrementamos AÑO
-        aaaa--;
-        printSetFechaHora();
+        tDecAno();
         break;
       }
       break;      // *** FIN ESTADO S_ANO  ****
@@ -335,31 +314,19 @@ void loop() {
       Serial.print("Estado S_MES: "); 
       Serial.println(S_MES);
       if (presionaBoton(BTN_MENU)) { // Transición BTN_MENU "B2" de MES a DIA
-        estado = S_DIA;
-        printSetFechaHora();
+        tDia();
         break;    
       }
       if (presionaBoton(BTN_EXIT)) { // Transición BTN_EXIT "B1" de MES a CHECK
-        estado = S_CHECK;
-        printCheck(confirma);
+        tCheck();
         break;
       }
       if (presionaBoton(BTN_SEL))  { // Transición BTN_SEL  "B3" incrementamos MES
-        if (mm<12) {
-          mm++;
-        } else {
-          mm = 1;
-        }
-        printSetFechaHora();
+        tIncMes();
         break;
       }
       if (presionaBoton(BTN_SET))  { // Transición BTN_SET  "B4" decrementamos MES
-        if (mm>1) {
-          mm--;
-        } else {
-          mm = 12;
-        }
-        printSetFechaHora();
+        tDecMes();
         break;
       }     
       break;      // *** FIN ESTADO S_MES  ****
@@ -369,31 +336,19 @@ void loop() {
       Serial.print("Estado S_DIA: ");
       Serial.println(S_DIA);
       if (presionaBoton(BTN_MENU)) { // Transición BTN_MENU "B2" de DIA a HORA
-        estado = S_HORA;
-        printSetFechaHora();
+        tHora();
         break;    
       }
       if (presionaBoton(BTN_EXIT)) { // Transición BTN_EXIT "B1" de DIA a CHECK
-        estado = S_CHECK;
-        printCheck(confirma);
+        tCheck();
         break;
       }
       if (presionaBoton(BTN_SEL))  { // Transición BTN_SEL  "B3" incrementamos DIA
-        if (dd<31) {
-          dd++;
-        } else {
-          dd = 1;
-        }
-        printSetFechaHora();
+        tIncDia();
         break;
       }
       if (presionaBoton(BTN_SET))  { // Transición BTN_SET  "B4" decrementamos DIA
-        if (dd>1) {
-          dd--;
-        } else {
-          dd = 31;
-        }
-        printSetFechaHora();
+        tDecDia();
         break;
       }      
       break;        //*** FIN ESTADO S_DIA ****
@@ -403,31 +358,19 @@ void loop() {
       Serial.print("Estado S_HORA: "); 
       Serial.println(S_HORA);
       if (presionaBoton(BTN_MENU)) { // Transición BTN_MENU "B2" de HORA a MIN
-        estado = S_MIN;
-        printSetFechaHora();
+        tMin();
         break;    
       }
       if (presionaBoton(BTN_EXIT)) { // Transición BTN_EXIT "B1" de HORA a CHECK
-        estado = S_CHECK;
-        printCheck(confirma);
+        tCheck();
         break;
       }
       if (presionaBoton(BTN_SEL))  { // Transición BTN_SEL  "B3" incrementamos HORA
-        if (hh<23) {
-          hh++;
-        } else {
-          hh = 0;
-        }
-        printSetFechaHora();
+        tIncHora();
         break;
       }
       if (presionaBoton(BTN_SET))  { // Transición BTN_SET  "B4" decrementamos HORA
-        if (hh>0) {
-          hh--;
-        } else {
-          hh = 23;
-        }
-        printSetFechaHora();
+        tDecHora();
         break;
       }        
       break;      // *** FIN ESTADO S_HORA ****
@@ -437,31 +380,19 @@ void loop() {
       Serial.print("Estado S_MIN: "); 
       Serial.println(S_MIN);
       if (presionaBoton(BTN_MENU)) { // Transición BTN_MENU "B2" de MIN a ANO
-        estado = S_ANO;
-        printSetFechaHora();
+        tAno();
         break;    
       }
       if (presionaBoton(BTN_EXIT)) { // Transición BTN_EXIT "B1" de MIN a CHECK
-        estado = S_CHECK;
-        printCheck(confirma);
+        tCheck();
         break;
       }
       if (presionaBoton(BTN_SEL))  { // Transición BTN_SEL  "B3" incrementamos MIN
-        if (ii<59) {
-          ii++;
-        } else {
-          ii = 0;
-        }
-        printSetFechaHora();
+        tIncMin();
         break;
       }
       if (presionaBoton(BTN_SET))  { // Transición BTN_SET  "B4" decrementamos MIN
-        if (ii>0) {
-          ii--;
-        } else {
-          ii = 59;
-        }
-        printSetFechaHora();
+        tDecMin();
         break;
       }        
       break;      // *** FIN ESTADO S_MIN  ****
@@ -471,13 +402,10 @@ void loop() {
       Serial.print("Estado S_CHECK: ");
       Serial.println(S_CHECK);
       if (presionaBoton(BTN_EXIT))  { // Transición BTN_EXIT  "B1" CHECK a DT
-        // Si cinfirmo los cambios, guardar los datos modificados
-        if (confirma) rtc.adjust(DateTime(aaaa,mm,dd,hh,ii,0));        
-        estado = S_DT;
-        printDT();
+        tCheckDt();
         break;
       }
-      if (presionaBoton(BTN_SEL))  { // Transición BTN_SEL  "B3" ACEPTAR CAMBIOS
+      if (presionaBoton(BTN_SEL))  { // Transición BTN_SEL  "B3" CONFIRMA DESCONFIRMA
         printCheck(!confirma);
         break;
       }        
@@ -497,6 +425,7 @@ uint8_t presionaBoton(int btn) {
   return result;
 }
 
+/***************  Configuracion de inicio ******************************/
 void startReloj(){
   // Preparamops el Reloj
   // *****************************************************
@@ -560,12 +489,251 @@ void setup_inicio(){
   lcd.createChar(0, desmarcado);  // Creamos el caracter de desmarcado
   lcd.createChar(1, marcado);     // Creamos el caracter de marcado
 
-  // por defecto
-  digitalWrite(LED_OFF, HIGH); 
+  // por defecto, estado OFF
+  tOff();
   
 }
 
-/******************* Utilitarios de Despligue ****************************/
+/********************** Funciones de Transiciones **********************/
+void tMenu(){
+  // Transición a MENU
+  estado = S_MENU;
+  digitalWrite(LED_OFF, LOW);
+  digitalWrite(LED_ON, HIGH);   
+  printMenu();
+}
+
+void tAutomatico(){
+  // Pasamos al estado AUTOMATICO
+  estado = S_AUTO;
+  printAutomatico(automatico);  
+}
+
+void tOff(){
+  // Pasamos a estado OFF
+  digitalWrite(LED_OFF, HIGH);
+  digitalWrite(LED_ON,   LOW);
+  printOff();
+}
+
+void tManual(){
+  // Pasamos al estado MANUAL
+  estado = S_MANUAL;
+  printManual(manual);  
+}
+
+void tSetAutomatico(){
+  // Seguimos en AUTOMATICO solo seleccionamos la accion
+  estado = S_AUTO;
+  if (!manual) printAutomatico(!automatico); // Si esta manual no podemos poner automatico
+  else printError("Modo Manu ACTIVO");  
+}
+
+void tInfo(){
+  // Pasamos a estado INFO
+  estado = S_INFO;
+  printInfo("T: 00:00", "   00.0L");  
+}
+
+void tSetManual(){
+  // Seleccionamos Estado MANUAL 
+  estado = S_MANUAL;
+  if (!automatico) printManual(!manual);     // Si esta automatico no podemos poner manual
+  else printError("Modo auto ACTIVO");  
+}
+
+void tConfig(){
+  // Pasamos a estado CONFIG
+  estado = S_CONFIG;
+  printConfig();
+}
+
+void tBox(){
+  // Pasamos estado BOX
+  estado = S_BOX;
+  printSetBox();
+}
+
+void tTpes(){
+  // Pasamos a TPES
+  estado = S_TPES;
+  printSetTiempoPes();
+}
+
+void tIncBox(){
+  // Incrementa box
+  box++;
+  printSetBox();
+}
+
+void tDecBox(){
+  // Decrementa box
+  if (box>0) {
+    box--;
+  } else {
+    box = 0;
+  }
+  printSetBox();  
+}
+
+void tDt(){
+  // Pasa a estado DT
+  estado = S_DT;
+  printDT();  
+}
+
+void tIncTpes(){
+  // Incrementa tpes en 50 miliseg
+  tpes += 50;
+  printSetTiempoPes();  
+}
+
+void tDecTpes(){
+  // Decrementa tpes en 50 miliseg
+  if (tpes>0) {
+    tpes -= 50;
+  } else {
+    tpes = 0;
+  }
+  printSetTiempoPes();  
+}
+
+void tAno(){
+  // Pasamos a ANO
+  estado = S_ANO;        
+  printSetFechaHora();
+}
+
+void tMes(){
+  // Pasamos a MES
+  estado = S_MES;
+  printSetFechaHora();  
+}
+
+void tCheck(){
+  // Pasamos a CHECK
+  estado = S_CHECK;
+  printCheck(confirma);
+}
+
+void tIncAno(){
+  // Incrementa aaaa (año)
+  aaaa++;
+  printSetFechaHora();  
+}
+
+void tDecAno(){
+  // Decrementa aaaa (año)
+  aaaa--;
+  printSetFechaHora();  
+}
+
+void tDia(){
+  // Pasa a DIA
+  estado = S_DIA;
+  printSetFechaHora();  
+}
+
+void tIncMes(){
+  // Incrementa el mm (mes)
+  if (mm<12) {
+    mm++;
+  } else {
+    mm = 1;
+  }
+  printSetFechaHora();
+}
+
+void tDecMes(){
+  // Decrementa mm (mes)
+  if (mm>1) {
+    mm--;
+  } else {
+    mm = 12;
+  }
+  printSetFechaHora();  
+}
+
+void tHora(){
+  // Pasa a HORA
+  estado = S_HORA;
+  printSetFechaHora();
+}
+
+void tIncDia(){
+  // Incrementa dd (dia)
+  if (dd<31) {
+    dd++;
+  } else {
+    dd = 1;
+  }
+  printSetFechaHora();
+}
+
+void tDecDia(){
+  // Decrementa dd (dia)
+  if (dd>1) {
+    dd--;
+  } else {
+    dd = 31;
+  }
+  printSetFechaHora();  
+}
+
+void tMin(){
+  // Pasa a MIN
+  estado = S_MIN;
+  printSetFechaHora();
+}
+
+void tIncHora(){
+  // Incrementa hh (hora)
+  if (hh<23) {
+    hh++;
+  } else {
+    hh = 0;
+  }
+  printSetFechaHora();
+}
+
+void tDecHora(){
+  // Decrementa hh (hora)
+  if (hh>0) {
+    hh--;
+  } else {
+    hh = 23;
+  }
+  printSetFechaHora();
+}
+
+void tIncMin(){
+  // Incrementa ii (minutos)
+  if (ii<59) {
+    ii++;
+  } else {
+    ii = 0;
+  }
+  printSetFechaHora();
+}
+
+void tDecMin(){
+  // Decrementa ii (minutos)
+  if (ii>0) {
+    ii--;
+  } else {
+    ii = 59;
+  }
+  printSetFechaHora();
+}
+
+void tCheckDt(){
+  // Si cinfirmo los cambios, guardar los datos modificados
+  if (confirma) rtc.adjust(DateTime(aaaa,mm,dd,hh,ii,0));        
+  estado = S_DT;
+  printDT();
+}
+
+/******************* Despliegue en Pantalla ****************************/
 void printOff() {
   lcd.backlight();        // Encendemos, la retroilumincion
   lcd.clear();
@@ -587,9 +755,6 @@ void printMenu() {
   lcd.print("[OPCIONES]");
   lcd.setCursor(0, 1);
   lcd.print("2 para cambiar");
-
-  // Pruebas Reles
-  digitalWrite(K2, LOW);
 }
 
 void printManual(boolean x) {
