@@ -208,7 +208,12 @@ void loop() {
       }
       break;      // *** FIN ESTADO S_CONFIG ****
       // ****************************************
-      
+
+
+      /*  **********************************************
+       *  ********** ESTADOS DE CONFIGURACION **********
+       *  **********************************************
+       */
     case S_BOX:     /*** INICIO ESTADO S_BOX ***/  
       Serial.print("Estado S_BOX: "); 
       Serial.println(S_BOX);
@@ -244,10 +249,12 @@ void loop() {
       }
       if (presionaBoton(BTN_SEL))  { // Transición BTN_SEL  "B3" incrementamos TPES
         tIncTpes();
+        actualizaTpes();
         break;
       }
       if (presionaBoton(BTN_SET))  { // Transición BTN_SET  "B4" decrementamos TPES
         tDecTpes();
+        actualizaTpes();
         break;
       }        
       break;      // *** FIN ESTADO S_TPES ****
@@ -271,6 +278,12 @@ void loop() {
       }
       break;      // *** FIN ESTADO S_DT ****
       // ****************************************
+
+      /*
+       *  ***************************************
+       *  ******* Configuración del Reloj *******
+       *  ***************************************
+       */
 
     case S_ANO:     /*** INICIO ESTADO S_ANO ***/
       Serial.print("Estado S_ANO: ");
@@ -382,6 +395,7 @@ void loop() {
       break;      // *** FIN ESTADO S_MIN  ****
       // **************************************
 
+      // Confirma y actualiza el RTC
     case S_CHECK:     /*** INICIO ESTADO S_CHECK ***/ 
       Serial.print("Estado S_CHECK: ");
       Serial.println(S_CHECK);

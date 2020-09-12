@@ -323,3 +323,8 @@ void tCheckDt(){
   estado = S_DT;
   printDT();
 }
+
+void actualizaTpes(){
+  electroValvulas34.SetOnTime(tpes);
+  electroValvulas34.SetOffTime(tpes);
+}
