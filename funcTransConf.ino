@@ -1,5 +1,5 @@
-/* Funciones de Transiciones
- *  y de utilidad gral
+/*  Funciones de Transiciones,
+ *  Setup y de utilidad gral
  */
 
 // Asume la existencia de un arreglo button
@@ -175,16 +175,16 @@ void tDt(){
 
 void tIncTpes(){
   // Incrementa tpes en 50 miliseg
-  tpes += 50;
+  tpesOn += 50;
   printSetTiempoPes();  
 }
 
 void tDecTpes(){
-  // Decrementa tpes en 50 miliseg
-  if (tpes>0) {
-    tpes -= 50;
+  // Decrementa tpesOn en 50 miliseg
+  if (tpesOn>0) {
+    tpesOn -= 50;
   } else {
-    tpes = 0;
+    tpesOn = 0;
   }
   printSetTiempoPes();  
 }
@@ -325,6 +325,6 @@ void tCheckDt(){
 }
 
 void actualizaTpes(){
-  electroValvulas34.SetOnTime(tpes);
-  electroValvulas34.SetOffTime(tpes);
+  electroValvulas34.SetOnTime(tpesOn);
+  electroValvulas34.SetOffTime(tpesOff);
 }

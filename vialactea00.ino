@@ -76,19 +76,20 @@ double   lit              = 0;      // Litros de leche ordeñados
 boolean  automatico       = false;  // Variable global del estado de automatico
 boolean  manual           = false;  // Variable global del estado de manual
 uint8_t  button_estate[4];          // Este arreglo contiene el último estado conocido de cada línea
-unsigned long tempo       = 0;      // Tiempo del ordeñe
+unsigned long tempo      = 0;      // Tiempo del ordeñe
 String   tiempo;
-int      aaaa             = 2020;   
+int      aaaa            = 2020;   
 
 
 // Variable Año
-int      mm               = 1;      // Variable Mes        
-int      dd               = 1;      // Variable Día
-int      hh               = 0;      // Variable Horas
-int      ii               = 0;      // Variable Minutos
-int      box              = 0;      // El Nº de BOX donde ira el micro
-int      tpes             = 500;    // Tiempo en Milis que dura el activado y desactivado de las pesoneras
-boolean  confirma         = false;  // Variable de confirmacion de cambios
+int     mm               = 1;      // Variable Mes        
+int     dd               = 1;      // Variable Día
+int     hh               = 0;      // Variable Horas
+int     ii               = 0;      // Variable Minutos
+int     box              = 0;      // El Nº de BOX donde ira el micro
+int     tpesOn           = 500;    // Tiempo en Milis que dura activado la pesonera
+int     tpesOff          = 200;    // Tiempo en Milis que la pesonera esta apagada 
+boolean confirma         = false;  // Variable de confirmacion de cambios
 DateTime ahora;                     // Variable Dia y tiempo actual
 
 // ******************* Helpers / Ayudantes **********************
@@ -97,7 +98,7 @@ LiquidCrystal_I2C lcd(0x27, 16, 2); // Inicia el LCD en la dirección 0x27, con 
 RTC_DS3231 rtc;                     // Creamos reloj
 
 // Configuramos reles prueba **************************************************************
-InterPin electroValvulas34(K3, K4, tpes, tpes);
+InterPin electroValvulas34(K3, K4, tpesOn, tpesOff);
 //InterPin electroValvulas34(6, 7, tpes, tpes);
 
 

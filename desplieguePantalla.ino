@@ -115,7 +115,7 @@ void printSetTiempoPes() {
   lcd.setCursor(0, 0);
   lcd.print("Tiempo Pesonera:");
   lcd.setCursor(0, 1);
-  sprintf(linea1, "Milis: %04d", tpes);
+  sprintf(linea1, "Milis: %04d", tpesOn);
   lcd.print(linea1);  
 }
 
